@@ -1,0 +1,133 @@
+import { a as validateRpcReturn, c as getDefinitionsWithDumps$1, d as validateDefinition, f as validateDefinitions, i as validateRpcArgs, l as reviveDumpError$1, n as getRpcHandler, o as createClientFromDump$1, p as hash, r as getRpcResolvedSetupResult, s as dumpFunctions$1, t as collectStaticRpcDump$1, u as serializeDumpError$1 } from "../dump-CgZShDRB.mjs";
+import { t as diagnostics } from "../diagnostics-hwjXp_UV.mjs";
+import { n as defineRpcFunction, t as createDefineWrapperWithContext } from "../define-BLWPsH6y.mjs";
+import { n as strictJsonStringify, t as STRUCTURED_CLONE_PREFIX } from "../serialization-C8Mnw9hK.mjs";
+//#region src/rpc/cache.ts
+/**
+* @experimental API is expected to change.
+*/
+var RpcCacheManager = class {
+	cacheMap = /* @__PURE__ */ new Map();
+	options;
+	keySerializer;
+	constructor(options) {
+		this.options = options;
+		this.keySerializer = options.keySerializer || ((args) => hash(args));
+	}
+	updateOptions(options) {
+		this.options = {
+			...this.options,
+			...options
+		};
+	}
+	cached(m, a) {
+		const methodCache = this.cacheMap.get(m);
+		if (methodCache) return methodCache.get(this.keySerializer(a));
+	}
+	has(m, a) {
+		return this.cacheMap.get(m)?.has(this.keySerializer(a)) ?? false;
+	}
+	apply(req, res) {
+		const methodCache = this.cacheMap.get(req.m) || /* @__PURE__ */ new Map();
+		methodCache.set(this.keySerializer(req.a), res);
+		this.cacheMap.set(req.m, methodCache);
+	}
+	validate(m) {
+		return this.options.functions.includes(m);
+	}
+	clear(fn) {
+		if (fn) this.cacheMap.delete(fn);
+		else this.cacheMap.clear();
+	}
+};
+//#endregion
+//#region src/rpc/collector.ts
+var RpcFunctionsCollectorBase = class {
+	context;
+	definitions = /* @__PURE__ */ new Map();
+	functions;
+	_onChanged = [];
+	constructor(context) {
+		this.context = context;
+		const definitions = this.definitions;
+		const self = this;
+		this.functions = new Proxy({}, {
+			get(_, prop) {
+				const definition = definitions.get(prop);
+				if (!definition) return void 0;
+				return getRpcHandler(definition, self.context);
+			},
+			has(_, prop) {
+				return definitions.has(prop);
+			},
+			getOwnPropertyDescriptor(_, prop) {
+				return {
+					value: definitions.get(prop)?.handler,
+					configurable: true,
+					enumerable: true
+				};
+			},
+			ownKeys() {
+				return Array.from(definitions.keys());
+			}
+		});
+	}
+	register(fn, force = false) {
+		if (this.definitions.has(fn.name) && !force) throw diagnostics.DF0021({ name: fn.name });
+		assertAgentJsonSerializable(fn);
+		this.definitions.set(fn.name, fn);
+		this._onChanged.forEach((cb) => cb(fn.name));
+	}
+	update(fn, force = false) {
+		if (!this.definitions.has(fn.name) && !force) throw diagnostics.DF0022({ name: fn.name });
+		assertAgentJsonSerializable(fn);
+		this.definitions.set(fn.name, fn);
+		this._onChanged.forEach((cb) => cb(fn.name));
+	}
+	onChanged(fn) {
+		this._onChanged.push(fn);
+		return () => {
+			const index = this._onChanged.indexOf(fn);
+			if (index !== -1) this._onChanged.splice(index, 1);
+		};
+	}
+	async getHandler(name) {
+		return await getRpcHandler(this.definitions.get(name), this.context);
+	}
+	getSchema(name) {
+		const definition = this.definitions.get(name);
+		if (!definition) throw diagnostics.DF0023({ name: String(name) });
+		return {
+			args: definition.args,
+			returns: definition.returns
+		};
+	}
+	has(name) {
+		return this.definitions.has(name);
+	}
+	get(name) {
+		return this.definitions.get(name);
+	}
+	list() {
+		return Array.from(this.definitions.keys());
+	}
+};
+function assertAgentJsonSerializable(fn) {
+	if (fn.agent && fn.jsonSerializable !== true) throw diagnostics.DF0019({ name: fn.name });
+}
+//#endregion
+//#region src/rpc/index.ts
+/** @deprecated Import from `devframe/rpc/dump` instead. */
+const collectStaticRpcDump = collectStaticRpcDump$1;
+/** @deprecated Import from `devframe/rpc/dump` instead. */
+const createClientFromDump = createClientFromDump$1;
+/** @deprecated Import from `devframe/rpc/dump` instead. */
+const dumpFunctions = dumpFunctions$1;
+/** @deprecated Import from `devframe/rpc/dump` instead. */
+const getDefinitionsWithDumps = getDefinitionsWithDumps$1;
+/** @deprecated Import from `devframe/rpc/dump` instead. */
+const reviveDumpError = reviveDumpError$1;
+/** @deprecated Import from `devframe/rpc/dump` instead. */
+const serializeDumpError = serializeDumpError$1;
+//#endregion
+export { RpcCacheManager, RpcFunctionsCollectorBase, STRUCTURED_CLONE_PREFIX, collectStaticRpcDump, createClientFromDump, createDefineWrapperWithContext, defineRpcFunction, dumpFunctions, getDefinitionsWithDumps, getRpcHandler, getRpcResolvedSetupResult, reviveDumpError, serializeDumpError, strictJsonStringify, validateDefinition, validateDefinitions, validateRpcArgs, validateRpcReturn };
